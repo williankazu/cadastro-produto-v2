@@ -16,6 +16,93 @@
             localStorage.setItem('produtos', JSON.stringify(produtos));
         }
 
+        // Função para copiar texto
+        function copiarTexto(texto, mensagem) {
+            // Usar a API moderna de clipboard
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(texto).then(() => {
+                    mostrarNotificacao(mensagem || 'Copiado!');
+                }).catch(err => {
+                    // Fallback para método antigo
+                    copiarTextoFallback(texto, mensagem);
+                });
+            } else {
+                // Fallback para navegadores antigos
+                copiarTextoFallback(texto, mensagem);
+            }
+        }
+
+        // Fallback para copiar texto em navegadores antigos
+        function copiarTextoFallback(texto, mensagem) {
+            const textarea = document.createElement('textarea');
+            textarea.value = texto;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                mostrarNotificacao(mensagem || 'Copiado!');
+            } catch (err) {
+                mostrarNotificacao('Erro ao copiar', 'danger');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // Mostrar notificação temporária
+        function mostrarNotificacao(mensagem, tipo = 'success') {
+            // Remover notificação existente se houver
+            const notificacaoExistente = document.getElementById('notificacao-temp');
+            if (notificacaoExistente) {
+                notificacaoExistente.remove();
+            }
+
+            const notificacao = document.createElement('div');
+            notificacao.id = 'notificacao-temp';
+            notificacao.className = `notification is-${tipo}`;
+            notificacao.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 200px; animation: slideIn 0.3s ease-out;';
+            notificacao.innerHTML = `
+                <button class="delete" onclick="this.parentElement.remove()"></button>
+                ${mensagem}
+            `;
+            
+            document.body.appendChild(notificacao);
+            
+            // Remover após 2 segundos
+            setTimeout(() => {
+                if (notificacao.parentElement) {
+                    notificacao.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => notificacao.remove(), 300);
+                }
+            }, 2000);
+        }
+
+        // Adicionar animações CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
         // Gerar código EAN13 padrão brasileiro
         function gerarEAN13() {
             // Código do país Brasil: 789
@@ -35,6 +122,16 @@
             codigo += digitoVerificador;
             
             document.getElementById('codigoBarras').value = codigo;
+        }
+
+        // Copiar código de barras do formulário
+        function copiarCodigoBarras() {
+            const codigo = document.getElementById('codigoBarras').value;
+            if (codigo) {
+                copiarTexto(codigo, 'Código de barras copiado!');
+            } else {
+                mostrarNotificacao('Nenhum código de barras para copiar', 'warning');
+            }
         }
 
         // Calcular preço de venda baseado em markup
@@ -98,18 +195,20 @@
             
             if (editandoIndex >= 0) {
                 produtos[editandoIndex] = produto;
+                const mensagem = 'Produto atualizado com sucesso!';
                 editandoIndex = -1;
                 document.getElementById('btnSubmit').innerHTML = '<span class="icon"><i class="fas fa-save"></i></span><span>Adicionar Produto</span>';
+                salvarProdutos();
+                atualizarTabela();
+                limparFormulario();
+                mostrarNotificacao(mensagem, 'success');
             } else {
                 produtos.push(produto);
+                salvarProdutos();
+                atualizarTabela();
+                limparFormulario();
+                mostrarNotificacao('Produto adicionado com sucesso!', 'success');
             }
-            
-            salvarProdutos();
-            atualizarTabela();
-            limparFormulario();
-            
-            // Notificação de sucesso
-            alert('Produto salvo com sucesso!');
         });
 
         function limparFormulario() {
@@ -137,7 +236,10 @@
                 
                 tr.innerHTML = `
                     <td><input type="checkbox" class="produto-checkbox" data-index="${index}"></td>
-                    <td>${produto.descricao}</td>
+                    <td>
+                        ${produto.descricao}
+                        <i class="fas fa-copy btn-copy" onclick="copiarTexto('${produto.descricao.replace(/'/g, "\\'")}', 'Descrição copiada!')" title="Copiar descrição"></i>
+                    </td>
                     <td>R$ ${produto.precoCusto.toFixed(2)}</td>
                     <td>R$ ${produto.precoVenda.toFixed(2)}</td>
                     <td><span class="badge badge-info">${produto.unidade}</span></td>
@@ -145,7 +247,10 @@
                     <td>${produto.margem.toFixed(2)}%</td>
                     <td>${produto.quantidade}</td>
                     <td><strong>R$ ${subtotal.toFixed(2)}</strong></td>
-                    <td>${produto.codigoBarras}</td>
+                    <td>
+                        ${produto.codigoBarras}
+                        ${produto.codigoBarras !== 'N/A' ? `<i class="fas fa-copy btn-copy" onclick="copiarTexto('${produto.codigoBarras}', 'Código de barras copiado!')" title="Copiar código"></i>` : ''}
+                    </td>
                     <td>
                         <button class="button is-small is-warning btn-action" onclick="editarProduto(${index})">
                             <span class="icon is-small">
@@ -208,6 +313,7 @@
                 produtos.splice(index, 1);
                 salvarProdutos();
                 atualizarTabela();
+                mostrarNotificacao('Produto excluído com sucesso!', 'success');
             }
         }
 
@@ -240,7 +346,7 @@
         function excluirSelecionados() {
             const checkboxes = document.querySelectorAll('.produto-checkbox:checked');
             if (checkboxes.length === 0) {
-                alert('Selecione pelo menos um produto para excluir.');
+                mostrarNotificacao('Selecione pelo menos um produto para excluir.', 'warning');
                 return;
             }
             
@@ -250,12 +356,13 @@
                 salvarProdutos();
                 atualizarTabela();
                 document.getElementById('selectAll').checked = false;
+                mostrarNotificacao(`${checkboxes.length} produto(s) excluído(s) com sucesso!`, 'success');
             }
         }
 
         function exportarExcel() {
             if (produtos.length === 0) {
-                alert('Não há produtos para exportar.');
+                mostrarNotificacao('Não há produtos para exportar.', 'warning');
                 return;
             }
             
@@ -275,11 +382,12 @@
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Produtos');
             XLSX.writeFile(wb, 'produtos.xlsx');
+            mostrarNotificacao('Arquivo Excel exportado com sucesso!', 'success');
         }
 
         function exportarCSV() {
             if (produtos.length === 0) {
-                alert('Não há produtos para exportar.');
+                mostrarNotificacao('Não há produtos para exportar.', 'warning');
                 return;
             }
             
@@ -295,11 +403,12 @@
             link.href = URL.createObjectURL(blob);
             link.download = 'produtos.csv';
             link.click();
+            mostrarNotificacao('Arquivo CSV exportado com sucesso!', 'success');
         }
 
         function exportarPDF() {
             if (produtos.length === 0) {
-                alert('Não há produtos para exportar.');
+                mostrarNotificacao('Não há produtos para exportar.', 'warning');
                 return;
             }
             
@@ -349,6 +458,124 @@
             doc.text(`Lucro Total: R$ ${lucroTotal.toFixed(2)}`, 14, finalY + 21);
             
             doc.save('produtos.pdf');
+            mostrarNotificacao('Arquivo PDF exportado com sucesso!', 'success');
+        }
+
+        function gerarEtiquetas() {
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = '';
+            
+            produtos.forEach((produto, index) => {
+                const etiqueta = document.createElement('div');
+                etiqueta.className = 'etiqueta';
+                
+                const descricao = document.createElement('div');
+                descricao.className = 'etiqueta-descricao';
+                descricao.textContent = produto.descricao;
+                
+                const unidade = document.createElement('div');
+                unidade.className = 'etiqueta-unidade';
+                unidade.textContent = `Unidade: ${produto.unidade.toUpperCase()}`;
+                
+                const preco = document.createElement('div');
+                preco.className = 'etiqueta-preco';
+                preco.textContent = `R$ ${produto.precoVenda.toFixed(2)}`;
+                
+                const barcodeContainer = document.createElement('div');
+                barcodeContainer.className = 'etiqueta-barcode';
+                
+                // Criar SVG para o código de barras
+                if (produto.codigoBarras && produto.codigoBarras !== 'N/A' && produto.codigoBarras.length === 13) {
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.id = `barcode-${index}`;
+                    barcodeContainer.appendChild(svg);
+                    
+                    etiqueta.appendChild(descricao);
+                    etiqueta.appendChild(unidade);
+                    etiqueta.appendChild(preco);
+                    etiqueta.appendChild(barcodeContainer);
+                    
+                    printArea.appendChild(etiqueta);
+                    
+                    // Gerar código de barras usando JsBarcode
+                    try {
+                        JsBarcode(`#barcode-${index}`, produto.codigoBarras, {
+                            format: 'EAN13',
+                            width: 1,
+                            height: 25,
+                            displayValue: true,
+                            fontSize: 8,
+                            margin: 1,
+                            marginTop: 2,
+                            marginBottom: 2
+                        });
+                    } catch (e) {
+                        barcodeContainer.innerHTML = `<small style="font-size: 6pt;">${produto.codigoBarras}</small>`;
+                    }
+                } else {
+                    const semCodigo = document.createElement('small');
+                    semCodigo.textContent = 'Sem código';
+                    semCodigo.style.cssText = 'color: #999; font-size: 6pt;';
+                    barcodeContainer.appendChild(semCodigo);
+                    
+                    etiqueta.appendChild(descricao);
+                    etiqueta.appendChild(unidade);
+                    etiqueta.appendChild(preco);
+                    etiqueta.appendChild(barcodeContainer);
+                    
+                    printArea.appendChild(etiqueta);
+                }
+            });
+        }
+
+        function visualizarEtiquetas() {
+            if (produtos.length === 0) {
+                mostrarNotificacao('Não há produtos para visualizar.', 'warning');
+                return;
+            }
+            
+            const printArea = document.getElementById('printArea');
+            gerarEtiquetas();
+            printArea.classList.add('active');
+            
+            // Scroll até a área de visualização
+            setTimeout(() => {
+                printArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+            
+            // Adicionar botão para fechar visualização
+            if (!document.getElementById('btnFecharVisualizacao')) {
+                const btnFechar = document.createElement('button');
+                btnFechar.id = 'btnFecharVisualizacao';
+                btnFechar.className = 'button is-danger is-large';
+                btnFechar.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 1000;';
+                btnFechar.innerHTML = '<span class="icon"><i class="fas fa-times"></i></span><span>Fechar Visualização</span>';
+                btnFechar.onclick = function() {
+                    printArea.classList.remove('active');
+                    this.remove();
+                };
+                document.body.appendChild(btnFechar);
+            }
+        }
+
+        function imprimirEtiquetas() {
+            if (produtos.length === 0) {
+                mostrarNotificacao('Não há produtos para imprimir.', 'warning');
+                return;
+            }
+            
+            const printArea = document.getElementById('printArea');
+            gerarEtiquetas();
+            printArea.classList.add('active');
+            
+            // Aguardar renderização dos códigos de barras e então imprimir
+            setTimeout(() => {
+                window.print();
+                // Remover a classe active após a impressão
+                setTimeout(() => {
+                    printArea.classList.remove('active');
+                }, 1000);
+            }, 500);
         }
 
         function importarArquivo(event) {
@@ -365,7 +592,7 @@
                         importarExcel(e.target.result);
                     }
                 } catch (error) {
-                    alert('Erro ao importar arquivo: ' + error.message);
+                    mostrarNotificacao('Erro ao importar arquivo: ' + error.message, 'danger');
                 }
             };
             
@@ -404,7 +631,9 @@
                 produtos = produtos.concat(novos);
                 salvarProdutos();
                 atualizarTabela();
-                alert(`${novos.length} produto(s) importado(s) com sucesso!`);
+                mostrarNotificacao(`${novos.length} produto(s) importado(s) do CSV com sucesso!`, 'success');
+            } else {
+                mostrarNotificacao('Nenhum produto válido encontrado no arquivo CSV.', 'warning');
             }
         }
 
@@ -428,7 +657,9 @@
                 produtos = produtos.concat(novos);
                 salvarProdutos();
                 atualizarTabela();
-                alert(`${novos.length} produto(s) importado(s) com sucesso!`);
+                mostrarNotificacao(`${novos.length} produto(s) importado(s) do Excel com sucesso!`, 'success');
+            } else {
+                mostrarNotificacao('Nenhum produto válido encontrado no arquivo Excel.', 'warning');
             }
         }
     

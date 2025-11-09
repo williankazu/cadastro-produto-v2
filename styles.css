@@ -1,4 +1,4 @@
-
+ 
         body {
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -73,5 +73,129 @@
         .badge-info {
             background-color: #3e8ed0;
             color: white;
+        }
+        
+        .btn-copy {
+            cursor: pointer;
+            color: #3e8ed0;
+            margin-left: 5px;
+            transition: color 0.3s;
+        }
+        
+        .btn-copy:hover {
+            color: #2366a3;
+        }
+        
+        .btn-copy:active {
+            color: #48c78e;
+        }
+        
+        .copy-tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        /* Estilos para impressão */
+        @media print {
+            body {
+                background: white !important;
+            }
+            .container-main, .hero, .box, .field, .control, .table-container, #btnFecharVisualizacao {
+                display: none !important;
+            }
+            #printArea {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 210mm;
+                padding: 5mm;
+                margin: 0;
+            }
+            .etiqueta {
+                visibility: visible !important;
+                page-break-inside: avoid;
+            }
+            @page {
+                size: A4;
+                margin: 5mm;
+            }
+        }
+        
+        .print-container {
+            display: none;
+        }
+        
+        .print-container.active {
+            display: block;
+            padding: 5mm;
+            max-width: 210mm;
+        }
+        
+        .etiqueta {
+            width: 45mm;
+            height: 53mm;
+            border: 1px solid #333;
+            padding: 2mm;
+            margin: 1mm;
+            display: inline-block;
+            vertical-align: top;
+            page-break-inside: avoid;
+            background: white;
+            box-sizing: border-box;
+            position: relative;
+        }
+        
+        .etiqueta-header {
+            text-align: center;
+            margin-bottom: 1mm;
+        }
+        
+        .etiqueta-descricao {
+            font-size: 8pt;
+            font-weight: bold;
+            margin-bottom: 1mm;
+            color: #333;
+            text-align: center;
+            line-height: 1.1;
+            min-height: 18px;
+            max-height: 22px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .etiqueta-unidade {
+            font-size: 7pt;
+            color: #666;
+            text-align: center;
+            margin-bottom: 1mm;
+            text-transform: uppercase;
+        }
+        
+        .etiqueta-preco {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin: 1mm 0;
+            padding: 1mm 0;
+            border-top: 1px solid #ddd;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .etiqueta-barcode {
+            text-align: center;
+            margin-top: 1mm;
+        }
+        
+        .etiqueta-barcode svg {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .etiqueta-barcode small {
+            font-size: 6pt;
         }
     
